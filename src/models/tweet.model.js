@@ -1,6 +1,6 @@
-import mongoose from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-const tweetSchema = new Schema([
+const tweetSchema = new Schema(
   {
     content: {
       type: String,
@@ -11,7 +11,7 @@ const tweetSchema = new Schema([
       ref: "User",
     },
   },
-  { timestramps: true },
-]);
+  { timestramps: true }
+);
 
-export const Tweet = new mongoose.model("Tweet", tweetSchema);
+export const Tweet = mongoose.model("Tweet", tweetSchema);

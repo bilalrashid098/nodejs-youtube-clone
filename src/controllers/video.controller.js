@@ -25,8 +25,6 @@ const getAllVideos = asyncHandler(async (req, res) => {
     options.sort[sortBy] = Number(sortType);
   }
 
-  console.log(options)
-
   const video = await Video.aggregatePaginate(
     [
       {
