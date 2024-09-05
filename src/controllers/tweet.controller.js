@@ -32,6 +32,74 @@ const createTweet = asyncHandler(async (req, res) => {
 
 const getUserTweets = asyncHandler(async (req, res) => {
   // TODO: get user tweets
+  const { userId, page = 1, limit = 10 } = req.query;
+
+  if (!userId) {
+    throw new ApiError(400, "User id is missing");
+  }
+
+  const options = {
+    page,
+    limit,
+    sort: {
+      createdAt: -1
+    } 
+  };
+
+  try {
+    const tweets = await Tweet.aggregatePaginate(
+      [
+        {
+          $match: {
+            owner: new mongoose.Types.ObjectId(userId),
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "owner",
+            foreignField: "_id",
+            as: "owner",
+            pipeline: [
+              {
+                $project: {
+                  _id: 1,
+                  fullname: 1,
+                  avatar: 1,
+                  cover: 1,
+                  email: 1,
+                },
+              },
+              
+            ],
+          },
+        },
+        {
+          $addFields: {
+            owner: {
+              $first: "$owner",
+            },
+          },
+        },
+       
+      ],
+      options
+    );
+
+    const data = {
+      tweets: tweets.docs,
+      total: tweets.totalDocs
+    }
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Tweet listing fetch successfully", data));
+  } catch (error) {
+    throw new ApiError(
+      500,
+      error?.message || "Something went wrong in tweet controller"
+    );
+  }
 });
 
 const updateTweet = asyncHandler(async (req, res) => {
