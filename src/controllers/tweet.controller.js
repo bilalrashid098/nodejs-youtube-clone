@@ -42,8 +42,8 @@ const getUserTweets = asyncHandler(async (req, res) => {
     page,
     limit,
     sort: {
-      createdAt: -1
-    } 
+      createdAt: -1,
+    },
   };
 
   try {
@@ -70,7 +70,6 @@ const getUserTweets = asyncHandler(async (req, res) => {
                   email: 1,
                 },
               },
-              
             ],
           },
         },
@@ -81,15 +80,14 @@ const getUserTweets = asyncHandler(async (req, res) => {
             },
           },
         },
-       
       ],
       options
     );
 
     const data = {
       tweets: tweets.docs,
-      total: tweets.totalDocs
-    }
+      total: tweets.totalDocs,
+    };
 
     return res
       .status(200)
@@ -118,7 +116,9 @@ const updateTweet = asyncHandler(async (req, res) => {
     const tweet = await Tweet.findByIdAndUpdate(
       tweetId,
       {
-        content,
+        $set: {
+          content,
+        },
       },
       {
         new: 1,
