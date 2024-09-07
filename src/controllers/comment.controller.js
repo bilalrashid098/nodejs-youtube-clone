@@ -52,14 +52,27 @@ const getVideoComments = asyncHandler(async (req, res) => {
             },
           },
         },
+        {
+          $lookup: {
+            from: "likes",
+            localField: "_id",
+            foreignField: "comment",
+            as: "likes",
+          },
+        },
+        {
+          $addFields: {
+            likes: { $size: "$likes" },
+          },
+        },
       ],
       options
     );
 
     const data = {
-        comments: comments.docs,
-        total: comments.totalDocs
-    }
+      comments: comments.docs,
+      total: comments.totalDocs,
+    };
 
     return res
       .status(200)

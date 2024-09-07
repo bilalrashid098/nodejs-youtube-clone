@@ -5,6 +5,7 @@ import { uploadMedia } from "../utils/cloudinary.js";
 import { ApiError } from "../utils/apiError.js";
 import { ApiResponse } from "../utils/apiResponse.js";
 import { asyncHandler } from "../utils/asyncHandle.js";
+import { Like } from "../models/like.model.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
@@ -161,15 +162,28 @@ const getVideoById = asyncHandler(async (req, res) => {
           },
         },
       },
+      {
+        $lookup: {
+          from: "likes",
+          localField: "_id",
+          foreignField: "video",
+          as: "likes",
+        },
+      },
+      {
+        $addFields: {
+          likes: { $size: "$likes" },
+        },
+      },
     ]);
 
-    if (!video) {
+    if (video?.length < 1) {
       throw new ApiError(404, "Video not found");
     }
 
     return res
       .status(200)
-      .json(new ApiResponse(200, "Video fetched successfully", video));
+      .json(new ApiResponse(200, "Video fetched successfully", video[0]));
   } catch (error) {
     throw new ApiError(500, error?.message || "Video fetching failed");
   }
@@ -224,7 +238,6 @@ const updateVideo = asyncHandler(async (req, res) => {
 
 const deleteVideo = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
-  //TODO: delete video
 
   if (!videoId) {
     throw new ApiError(400, "Video id is required");
@@ -235,6 +248,10 @@ const deleteVideo = asyncHandler(async (req, res) => {
   if (!video) {
     throw new ApiError(404, "Video not found");
   }
+
+  await Like.deleteMany({
+    video: new mongoose.Types.ObjectId(videoId),
+  });
 
   return res
     .status(200)

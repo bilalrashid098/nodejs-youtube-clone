@@ -80,6 +80,19 @@ const getUserTweets = asyncHandler(async (req, res) => {
             },
           },
         },
+        {
+          $lookup: {
+            from: "likes",
+            localField: "_id",
+            foreignField: "tweet",
+            as: "likes",
+          },
+        },
+        {
+          $addFields: {
+            likes: { $size: "$likes" },
+          },
+        },
       ],
       options
     );
@@ -137,7 +150,6 @@ const updateTweet = asyncHandler(async (req, res) => {
 });
 
 const deleteTweet = asyncHandler(async (req, res) => {
-  //TODO: delete tweet
   const { tweetId } = req.query;
 
   if (!tweetId) {
@@ -146,6 +158,9 @@ const deleteTweet = asyncHandler(async (req, res) => {
 
   try {
     await Tweet.findByIdAndDelete(tweetId);
+    await Like.deleteMany({
+      tweet: new mongoose.Types.ObjectId(tweetId),
+    });
     return res
       .status(200)
       .json(new ApiResponse(200, "Tweet deleted successfully"));
