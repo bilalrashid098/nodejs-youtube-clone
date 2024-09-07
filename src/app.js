@@ -17,14 +17,16 @@ app.use(express.static("public")); // to serve static files
 app.use(cookieParser()); // to parse cookies
 
 // routes import
+import dashboardRouter from "./routes/dashboard.routes.js";
 import userRouter from "./routes/user.routes.js";
 import videoRouter from "./routes/video.routes.js";
-import subscriptionRouter from "./routes/subscription.routes.js"
-import tweetRouter from "./routes/tweet.routes.js"
-import commentRouter from "./routes/comment.routes.js"
-import likeRouter from "./routes/like.routes.js"
+import subscriptionRouter from "./routes/subscription.routes.js";
+import tweetRouter from "./routes/tweet.routes.js";
+import commentRouter from "./routes/comment.routes.js";
+import likeRouter from "./routes/like.routes.js";
 
 // routes declaration
+app.use("/api/v1/dashboard", dashboardRouter);
 app.use("/api/v1/user", userRouter);
 app.use("/api/v1/video", videoRouter);
 app.use("/api/v1/subscription", subscriptionRouter);
