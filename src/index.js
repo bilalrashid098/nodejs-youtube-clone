@@ -37,15 +37,20 @@ app.use("/api/v1/tweet", tweetRouter);
 app.use("/api/v1/comment", commentRouter);
 app.use("/api/v1/like", likeRouter);
 app.use("/api/v1/playlist", playlistRouter);
+app.get("/", (req, res) => res.send("Express on Vercel"));
 
 dotenv.config({
   path: "./env",
 });
 
+app.get("/get", (req, res) =>
+  res.send(`Express on Vercel | ${process.env.PORT}`)
+);
+
 connectDB()
   .then(() => {
-    app.listen(process.env.PORT || 8000, () => {
-      console.log(`Server started on port ${process.env.PORT || 8000}`);
+    app.listen(process.env.PORT || 3000, () => {
+      console.log(`Server started on port ${process.env.PORT || 3000}`);
     });
   })
   .catch((err) => {
