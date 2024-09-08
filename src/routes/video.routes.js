@@ -5,6 +5,7 @@ import {
   deleteVideo,
   getAllVideos,
   getVideoById,
+  increaseViewInVideo,
   publishAVideo,
   togglePublishStatus,
   updateVideo,
@@ -36,5 +37,6 @@ router
   .route("/update")
   .patch(verifyJWT, upload.single("thumbnail"), updateVideo);
 router.route("/update-status").patch(verifyJWT, togglePublishStatus);
+router.route("/update-view").patch(verifyJWT, increaseViewInVideo)
 
 export default router;

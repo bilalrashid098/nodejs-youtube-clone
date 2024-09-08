@@ -9,8 +9,6 @@ import { Like } from "../models/like.model.js";
 
 const getAllVideos = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
-  console.log(page, limit, query, userId);
-  //TODO: get all videos based on query, sort, pagination
 
   if (!userId) {
     throw new ApiError(400, "User id is missing");
@@ -26,52 +24,60 @@ const getAllVideos = asyncHandler(async (req, res) => {
     options.sort[sortBy] = Number(sortType);
   }
 
-  const video = await Video.aggregatePaginate(
-    [
-      {
-        $match: {
-          owner: new mongoose.Types.ObjectId(userId),
-        },
-      },
-      {
-        $lookup: {
-          from: "users",
-          localField: "owner",
-          foreignField: "_id",
-          as: "owner",
-          pipeline: [
-            {
-              $project: {
-                _id: 1,
-                fullname: 1,
-                avatar: 1,
-                email: 1,
-              },
-            },
-          ],
-        },
-      },
-      {
-        $addFields: {
-          owner: {
-            $first: "$owner",
+  try {
+    const video = await Video.aggregatePaginate(
+      [
+        {
+          $match: {
+            owner: new mongoose.Types.ObjectId(userId),
+            isPublished: true,
           },
         },
-      },
-    ],
-    options
-  );
+        {
+          $lookup: {
+            from: "users",
+            localField: "owner",
+            foreignField: "_id",
+            as: "owner",
+            pipeline: [
+              {
+                $project: {
+                  _id: 1,
+                  fullname: 1,
+                  avatar: 1,
+                  email: 1,
+                },
+              },
+            ],
+          },
+        },
+        {
+          $addFields: {
+            owner: {
+              $first: "$owner",
+            },
+          },
+        },
+      ],
+      options
+    );
 
-  if (!video) {
-    res.status(400).json(new ApiError(400, "No video"));
+    if (!video) {
+      res.status(400).json(new ApiError(400, "No video"));
+    }
+
+    const data = {
+      videos: video.docs,
+      total: video.totalDocs,
+    };
+
+    res.status(200).json(new ApiResponse(200, "Video listing", data));
+  } catch (error) {
+    throw new ApiError(
+      500,
+      error?.message || "Something went wrong in video controller"
+    );
   }
-
-  const data = {
-    videos: video.docs,
-    total: video.totalDocs,
-  };
-
-  res.status(200).json(new ApiResponse(200, "Video listing", data));
 });
 
 const publishAVideo = asyncHandler(async (req, res) => {
@@ -114,7 +120,10 @@ const publishAVideo = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, "Video published successfully", newVideo));
   } catch (error) {
-    throw new ApiError(500, error?.message || "Video publishing failed");
+    throw new ApiError(
+      500,
+      error?.message || "Something went wrong in video controller"
+    );
   }
 });
 
@@ -185,7 +194,10 @@ const getVideoById = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, "Video fetched successfully", video[0]));
   } catch (error) {
-    throw new ApiError(500, error?.message || "Video fetching failed");
+    throw new ApiError(
+      500,
+      error?.message || "Something went wrong in video controller"
+    );
   }
 });
 
@@ -211,29 +223,36 @@ const updateVideo = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Thumbnail is required");
   }
 
-  const thumbnail = await uploadMedia(localThumbnailFile);
+  try {
+    const thumbnail = await uploadMedia(localThumbnailFile);
 
-  const video = await Video.findByIdAndUpdate(
-    videoId,
-    {
-      $set: {
-        title,
-        description,
-        thumbnail: thumbnail?.url,
+    const video = await Video.findByIdAndUpdate(
+      videoId,
+      {
+        $set: {
+          title,
+          description,
+          thumbnail: thumbnail?.url,
+        },
       },
-    },
-    {
-      new: true,
+      {
+        new: true,
+      }
+    );
+
+    if (!video) {
+      throw new ApiError(404, "Video not found");
     }
-  );
 
-  if (!video) {
-    throw new ApiError(404, "Video not found");
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Video updated successfully", video));
+  } catch (error) {
+    throw new ApiError(
+      500,
+      error?.message || "Something went wrong in video controller"
+    );
   }
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, "Video updated successfully", video));
 });
 
 const deleteVideo = asyncHandler(async (req, res) => {
@@ -249,13 +268,20 @@ const deleteVideo = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Video not found");
   }
 
-  await Like.deleteMany({
-    video: new mongoose.Types.ObjectId(videoId),
-  });
+  try {
+    await Like.deleteMany({
+      video: new mongoose.Types.ObjectId(videoId),
+    });
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, "Video deleted successfully"));
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Video deleted successfully"));
+  } catch (error) {
+    throw new ApiError(
+      500,
+      error?.message || "Something went wrong in video controller"
+    );
+  }
 });
 
 const togglePublishStatus = asyncHandler(async (req, res) => {
@@ -269,21 +295,62 @@ const togglePublishStatus = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Invalid video id");
   }
 
-  await Video.findByIdAndUpdate(
-    videoId,
-    {
-      $set: {
-        isPublished: status || false,
+  try {
+    await Video.findByIdAndUpdate(
+      videoId,
+      {
+        $set: {
+          isPublished: status || false,
+        },
       },
-    },
-    {
-      new: true,
-    }
-  );
+      {
+        new: true,
+      }
+    );
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, "Video status changed successfully"));
+    return res
+      .status(200)
+      .json(new ApiResponse(200, "Video status changed successfully"));
+  } catch (error) {
+    throw new ApiError(
+      500,
+      error?.message || "Something went wrong in video controller"
+    );
+  }
+});
+
+const increaseViewInVideo = asyncHandler(async (req, res) => {
+  const { videoId } = req.body;
+
+  if (!videoId) {
+    throw new ApiError(400, "Video id is required");
+  }
+  try {
+    if (!isValidObjectId(videoId)) {
+      throw new ApiError(400, "Invalid video id");
+    }
+
+    const totalViews = await Video.findByIdAndUpdate(
+      videoId,
+      {
+        $inc: { views: 1 },
+      },
+      {
+        new: true,
+      }
+    );
+
+    return res.status(200).json(
+      new ApiResponse(200, "Video view updated successfully", {
+        total: totalViews?.views,
+      })
+    );
+  } catch (error) {
+    throw new ApiError(
+      500,
+      error?.message || "Something went wrong in video controller"
+    );
+  }
 });
 
 export {
@@ -293,4 +360,5 @@ export {
   updateVideo,
   deleteVideo,
   togglePublishStatus,
+  increaseViewInVideo,
 };
